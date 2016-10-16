@@ -28,7 +28,7 @@ Each of these types has its own address format. The address of unix domain socke
 
 ### Stream Sockets
 
-- Use TCP (Transmission Control Protocol).
+- Uses TCP (Transmission Control Protocol).
 - Reliable and stream oriented.
 
 ### Datagram Sockets
