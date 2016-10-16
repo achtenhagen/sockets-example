@@ -3,6 +3,10 @@ A simple example of a client-server program
 
 This example demonstrates the ability for a client program running on one Host to connect to a server program running on a different host. An IP address and valid port number are required for sockets going over the internet. Both the client and the server establish their own socket for communicating over the network.
 
+## Usage
+
+Compile both sclient.c and sserver.c separately using a C compiler like gcc. The client program requires 2 arguments, a hostname and port number. The server program only requires a port number to start listening.
+
 ## Overview
 
 ### Client side
