@@ -1,4 +1,5 @@
 // Sockets Example - Server
+// A simple TCP server that listens for connections on a specified port
 
 #include <stdio.h>
 #include <stdlib.h>
