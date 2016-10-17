@@ -41,6 +41,7 @@ Each of these types has its own address format. The address of unix domain socke
 - Unreliable and message oriented.
 
 ## Sending a message from stdin
+```C
 printf("Please enter the message: ");
 bzero(buffer, 256);
 fgets(buffer, 255, stdin);
@@ -48,6 +49,7 @@ n = write(sockfd, buffer, strlen(buffer));
 if (n < 0) {
     error("Failed to write to socket.");
 }
+```
 
 
 ### References: http://www.linuxhowtos.org/C_C++/socket.htm
