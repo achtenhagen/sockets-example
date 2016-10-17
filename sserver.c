@@ -24,6 +24,7 @@ int main (int argc, char *argv[]) {
         fprintf(stderr, "Error, no port number specified.");
         exit(1);
     }
+    printf("Waiting for client...\n");
     // socket() takes 3 args: address domain, socket type, protocol
     // Unix domain: AF_UNIX, Internet: AF_INET
     // TCP: SOCK_STREAM, UDP: SOCK_DGRAM
@@ -83,8 +84,10 @@ void handlerequest (int sock) {
     if (n < 0) {
         error("Failed to read from socket.");
     }
-    printf("Here is the message: %s\n", buffer);
-    n = write(sock, "I got your message", 18);
+    printf("Incoming message:\n%s\n", buffer);
+    // Server sends its own Router number, and its initial known least cost to each other router
+    char msg[] = "Router number: 1\nInitial known least cost to other routers:\n1 -> 0 = 1\n1 -> 2 = 1\n";
+    n = write(sock, msg, sizeof(msg));
     if (n < 0) {
         error("Failed to write to socket.");
     }

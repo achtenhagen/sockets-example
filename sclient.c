@@ -19,6 +19,7 @@ int main (int argc, char *argv[]) {
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
+    printf("Client\n");
     char buffer[256];
     if (argc < 3) {
         fprintf(stderr, "usage %s hostname port", argv[0]);
@@ -43,19 +44,21 @@ int main (int argc, char *argv[]) {
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         error("Failed to connect.");
     }
-    printf("Please enter the message: ");
-    bzero(buffer, 256);
-    fgets(buffer, 255, stdin);
-    n = write(sockfd, buffer, strlen(buffer));
+    // Client displays its initial known least cost to each other router
+    // Client sends its own Router number, and its initial known least cost to each other router
+    char msg[] = "Router number: 0\nInitial known least cost to other routers:\n0 -> 1 = 1\n0 -> 2 = 3\n0 -> 3 = 7\n";
+    printf("%s\n", msg);
+    n = write(sockfd, msg, strlen(msg));
     if (n < 0) {
         error("Failed to write to socket.");
     }
+    // Client displays information received from server
     bzero(buffer, 256);
     n = read(sockfd, buffer, 255);
     if (n < 0) {
         error("Failed to read from socket.");
     }
-    printf("%s", buffer);
+    printf("Response from server:\n%s", buffer);
 
     return 0;
 }
