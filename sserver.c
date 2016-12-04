@@ -1,3 +1,4 @@
+
 // Sockets Example - Server
 // A simple TCP server that listens for connections on a specified port
 
@@ -9,13 +10,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+void bellmanford();
 void handlerequest(int);
 void error (char *msg) {
     perror(msg);
     exit(1);
 }
 
-int main (int argc, char *argv[]) {
+int main(int argc, char **argv) {
     int sockfd, newsockfd, port, pid;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -34,14 +36,11 @@ int main (int argc, char *argv[]) {
         error("Error opening socket.");
     }
     // bzero() takes two args: pointer to buffer, size of buffer
-    // Set all values to zero in buffer
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-    // atoi() converts a string into an integer
-    port = atoi(argv[1]);
-    serv_addr.sin_family = AF_INET;
-    // htons() converts a port number in host byte order to a port
+    bzero((char *) &serv_addr, sizeof(serv_addr)); // Set all values to zero in buffer
+    port = atoi(argv[1]); // atoi() converts a string into an integer
+    serv_addr.sin_family = AF_INET;    
     // number in network byte order
-    serv_addr.sin_port = htons(port);
+    serv_addr.sin_port = htons(port); // htons() converts a port number in host byte order to a port
     // INADDR_ANY gets the IP address of the machine
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     // bind() takes 3 args: file descriptor, bind address, size of address
@@ -76,19 +75,4 @@ int main (int argc, char *argv[]) {
     return 0;
 }
 
-void handlerequest (int sock) {
-    int n;
-    char buffer[256];
-    bzero(buffer, 256);
-    n = read(sock, buffer, 255);
-    if (n < 0) {
-        error("Failed to read from socket.");
-    }
-    printf("Incoming message:\n%s\n", buffer);
-    // Server sends its own Router number, and its initial known least cost to each other router
-    char msg[] = "Router number: 1\nInitial known least cost to other routers:\n1 -> 0 = 1\n1 -> 2 = 1\n";
-    n = write(sock, msg, sizeof(msg));
-    if (n < 0) {
-        error("Failed to write to socket.");
-    }
-}
+

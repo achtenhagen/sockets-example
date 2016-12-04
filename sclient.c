@@ -1,5 +1,8 @@
-// Sockets Example - Client
 
+// Sockets Example - Client & Server
+// Created by Maurice Achtenhagen
+
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,57 +11,220 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <unistd.h>
 
-void error(char *msg) {
-    perror(msg);
-    exit(0);
-}
+#define h_addr h_addr_list[0]
 
-int main (int argc, char *argv[]) {
-    int sockfd, port, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
+void lct();
+void conn();
+void displaytable();
+void sendtable();
+void updatetable();
+void receive();
+void bellmanford();
+void error();
 
-    printf("Client\n");
-    char buffer[256];
-    if (argc < 3) {
-        fprintf(stderr, "usage %s hostname port", argv[0]);
+int id;
+typedef struct {
+    int u, v, w;
+} Edge;
+
+const int NODES = 4; // number of nodes
+int EDGES;           // number of edges
+Edge edges[16];      // large enough for n <= 2^NODES = 16
+int d[16];           // d[i] is the minimum distance from source node s to node i
+char *routers[4] = {
+    "10.0.1.7",
+    "10.0.1.3",
+    "45.33.74.157",
+    "10.0.1.x"
+};
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "usage %s id port", argv[0]);
         exit(0);
     }
-    port = atoi(argv[2]);
+    id = atoi(argv[1]);
+    if (id == 0) {        
+        conn(atoi(argv[2]));
+    } else {
+       receive(argv[2]); 
+    }    
+    return 0;
+}
+
+void lct() {
+    int i, j, k, w;
+    k = 0;
+    FILE *f = fopen("lct.txt", "r");
+    for (i = 0; i < NODES; ++i) {
+        for (j = 0; j < NODES; ++j) {
+            fscanf(f, "%d", &w);
+            if (w != 0) {
+                edges[k].u = i;
+                edges[k].v = j;
+                edges[k].w = w;
+                k++;
+            }
+        }
+    }
+    fclose(f);
+    EDGES = k;
+}
+
+//  Connect
+//  - Load least cost table
+//  - Display least cost to each other router
+//  - Send least cost table to each other router
+
+void conn(int port) {
+    int sockfd, n, num_conn, rid;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+        
+    lct(); // Load least cost table
+    displaytable(); // Display least cost to each other router
+    // Send least cost table to each other router
+    num_conn = 0;
+    rid = -1;
+    do {        
+        sleep(1);
+        rid++;
+        if (rid == 4) { rid = 0; }
+        if (rid == id) { continue; }
+        char *host = routers[rid];
+        printf("Attempting to connect to router %d (%s) on port %d...\n", rid, host, port);
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0) {
+            error("Failed to open socket.");
+            continue;
+        }
+        server = gethostbyname(host);
+        if (server == NULL) {
+            error("No such host (bad hostname).");
+            continue;
+        }
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);        
+        serv_addr.sin_port = htons(port);
+        // connect() takes 3 args: file descriptor, address of host, size of address        
+        if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+            error("Unable to connect to host.");
+            continue;
+        }
+        char msg[] = "0 1 3 7";
+        n = write(sockfd, msg, strlen(msg));
+        if (n < 0) {
+            error("Failed to write to socket.");
+            continue;
+        }
+        num_conn++;        
+    } while (num_conn < 3);
+}
+
+void displaytable() {
+    printf("\nShortest path from router %d to other routers:\n\n", id);
+    for (int i = 0; i < NODES; ++i) printf("Node %d\t", i);
+    printf("\n------------------------------\n");
+    bellmanford(id);
+    for (int i = 0; i < NODES; ++i) printf("%d\t", d[i]);
+    printf("\n------------------------------\n\n");
+}
+
+void updatetable(int sock) {
+    char buffer[256];
+    bzero(buffer, 256);
+    int n = read(sock, buffer, 255);
+    if (n < 0) { error("Failed to read from socket."); }
+    printf("Updating table with the following values: %s\n", buffer);
+    char *token = strtok(buffer, " ");
+    for (int j = 0; j < NODES; ++j) {
+        if (token != NULL) {
+            int num = atoi(token);
+            if (num != 0) {
+                edges[3].u = id;
+                edges[3].v = j;
+                edges[3].w = num;
+            }
+            token = strtok(NULL, " ");
+        }
+    }
+    displaytable();
+}
+
+//  Receive
+//  - Wait for clients to connect
+//  - Receive least cost table from each other router
+//  - Update least cost to each other router
+//  - Display least cost table to each router
+
+void receive(int port) {
+    int sockfd, newsockfd, pid;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr, cli_addr;
+
+    lct();
+    printf("Waiting for other routers...\n");
+    // socket() takes 3 args: address domain, socket type, protocol
+    // Unix domain: AF_UNIX, Internet: AF_INET
+    // TCP: SOCK_STREAM, UDP: SOCK_DGRAM
+    // Returns entry into file descriptor table, -1 otherwise
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         error("Failed to open socket.");
     }
-    server = gethostbyname(argv[1]);
-    if (server == NULL) {
-        fprintf(stderr, "Error - no such host.");
-        exit(0);
-    }
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    // bzero() takes two args: pointer to buffer, size of buffer
+    bzero((char *) &serv_addr, sizeof(serv_addr)); // Set all values to zero in buffer    
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-    serv_addr.sin_port = htons(port);
-    // connect() takes 3 args: file descriptor, address of host, size of address
-    // Establishes connection with server
-    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        error("Failed to connect.");
+    serv_addr.sin_port = htons(port); // htons() converts a port number in host byte order to a port  
+    serv_addr.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY gets the IP address of the machine
+    // bind() takes 3 args: file descriptor, bind address, size of address
+    // Binds the socket to an address
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        error("Failed to bind socket.");
     }
-    // Client displays its initial known least cost to each other router
-    // Client sends its own Router number, and its initial known least cost to each other router
-    char msg[] = "Router number: 0\nInitial known least cost to other routers:\n0 -> 1 = 1\n0 -> 2 = 3\n0 -> 3 = 7\n";
-    printf("%s\n", msg);
-    n = write(sockfd, msg, strlen(msg));
-    if (n < 0) {
-        error("Failed to write to socket.");
+    // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
+    // Allows the process to listen on the socket for connections
+    listen(sockfd, 5);
+    clilen = sizeof(cli_addr);
+    // Main loop
+    while (1) {
+        // accept() causes the process to block until a client connects to the server
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        if (newsockfd < 0) {
+            error("Failed to accept connection.");
+        }
+        pid = fork();
+        if (pid < 0) {
+            error("Failed to fork process.");
+        }
+        if (pid == 0) {
+            close(sockfd);
+            updatetable(newsockfd);            
+            exit(0);
+        } else {
+            close(newsockfd);
+        }
     }
-    // Client displays information received from server
-    bzero(buffer, 256);
-    n = read(sockfd, buffer, 255);
-    if (n < 0) {
-        error("Failed to read from socket.");
-    }
-    printf("Response from server:\n%s", buffer);
+    close(sockfd);
+}
 
-    return 0;
+void bellmanford(int src) {
+    int i, j;
+    for (i = 0; i < NODES; ++i) { d[i] = INT_MAX; }
+    d[src] = 0;
+    for (i = 0; i < NODES - 1; ++i) {
+        for (j = 0; j < EDGES; ++j) {
+            if (d[edges[j].u] + edges[j].w < d[edges[j].v]) {
+                d[edges[j].v] = d[edges[j].u] + edges[j].w;
+            }
+        }
+    }
+}
+
+void error(char *msg) {
+    perror(msg);
+    // exit(0);
 }
