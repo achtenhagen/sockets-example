@@ -24,7 +24,7 @@ void receive();
 void bellmanford();
 void error();
 
-int id;
+int id, port;
 typedef struct {
     int u, v, w;
 } Edge;
@@ -36,8 +36,8 @@ int d[16];           // d[i] is the minimum distance from source node s to node 
 char *routers[4] = {
     "10.0.1.7",
     "10.0.1.3",
-    "45.33.74.157",
-    "10.0.1.x"
+    "10.0.1.2",
+    "45.33.74.157"
 };
 
 int main(int argc, char *argv[]) {
@@ -46,11 +46,9 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
     id = atoi(argv[1]);
-    if (id == 0) {        
-        conn(atoi(argv[2]));
-    } else {
-       receive(argv[2]); 
-    }    
+    port = atoi(argv[2]);
+    if (id == 0) { conn(); }
+    receive();
     return 0;
 }
 
@@ -78,7 +76,7 @@ void lct() {
 //  - Display least cost to each other router
 //  - Send least cost table to each other router
 
-void conn(int port) {
+void conn() {
     int sockfd, n, num_conn, rid;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -88,7 +86,7 @@ void conn(int port) {
     // Send least cost table to each other router
     num_conn = 0;
     rid = -1;
-    do {        
+    do {
         sleep(1);
         rid++;
         if (rid == 4) { rid = 0; }
@@ -107,20 +105,21 @@ void conn(int port) {
         }
         bzero((char *) &serv_addr, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);        
+        bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
         serv_addr.sin_port = htons(port);
         // connect() takes 3 args: file descriptor, address of host, size of address        
         if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
             error("Unable to connect to host.");
             continue;
         }
+        printf("Connected to router %d (%s)...\n", rid, host);
         char msg[] = "0 1 3 7";
         n = write(sockfd, msg, strlen(msg));
         if (n < 0) {
             error("Failed to write to socket.");
             continue;
         }
-        num_conn++;        
+        num_conn++;
     } while (num_conn < 3);
 }
 
@@ -160,12 +159,13 @@ void updatetable(int sock) {
 //  - Update least cost to each other router
 //  - Display least cost table to each router
 
-void receive(int port) {
+void receive() {
     int sockfd, newsockfd, pid;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
 
     lct();
+    printf("Listening on port %d\n", port);
     printf("Waiting for other routers...\n");
     // socket() takes 3 args: address domain, socket type, protocol
     // Unix domain: AF_UNIX, Internet: AF_INET
