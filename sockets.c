@@ -1,6 +1,7 @@
 
-// Sockets Example - Client & Server
-// Created by Maurice Achtenhagen
+// CS 356 - Sockets
+// Maurice Achtenhagen (2016)
+// Using Bellman–Ford algorithm
 
 #include <limits.h>
 #include <stdio.h>
@@ -13,12 +14,12 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#define _GNU_SOURCE
 #define h_addr h_addr_list[0]
 
 void add();
 void list();
 void lct();
-void conn();
 void displaytable();
 void sendtable();
 void updatetable();
@@ -53,7 +54,7 @@ int main(int argc, char *argv[]) {
     printf("The commands are as follows:\n\n");
     printf("(1) add \tAdd new router (4 max).\n");
     printf("(2) list \tList current routers.\n");
-    printf("(3) send\tSend least cost table to another router.\n");
+    printf("(3) send\tSend least cost table to other routers.\n");
     printf("(4) table\tDisplay least cost table.\n");
     printf("(5) exit\tQuit the program.\n\n");
     size_t bufsize = 32;
@@ -71,18 +72,25 @@ int main(int argc, char *argv[]) {
         } else if (atoi(buffer) == 2) {
             list();
         } else if (atoi(buffer) == 3) {
-            conn();
+            sendtable();
         } else if (atoi(buffer) == 4) {
             displaytable();
+        } else {
+            if (atoi(buffer) != 5) {
+                printf("> Invalid command. Options: [1, 2, 3, 4, 5]\n");
+            } else {
+                printf("Bye!\n");
+            }
         }
     }
     return 0;
 }
 
+// Add new router (4 max)
 void add() {
     size_t bufsize = 32;
     char *buffer = (char *)malloc(bufsize * sizeof(char));
-    printf("Router IP address: ");
+    printf("> Router IP address: ");
     getline(&buffer, &bufsize, stdin);
     for (int i = 0; i < 4; i++) {
         if (routers[i] == NULL) {
@@ -90,9 +98,10 @@ void add() {
             break;
         }
     }    
-    // printf("Added router with IP: %s\n", routers[0]);
+    printf("Added router with IP: %s", routers[0]);
 }
 
+// List current routers
 void list() {
     for (int i = 0; i < 4; i++) {
         printf("Router %d -> %s", i, routers[i]);
@@ -100,6 +109,51 @@ void list() {
             printf("\n");
         }
     }
+}
+
+// Send least cost table to another router
+void sendtable() {
+    int sockfd, n, num_conn, rid;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    num_conn = 0;
+    rid = -1;
+    do {
+        rid++;
+        if (rid == 4) { rid = 0; }
+        if (rid == id) { continue; }
+        if (routers[rid] == NULL) { continue; }
+        char *host = routers[rid];
+        printf("> Attempting to connect to %s\n", host);
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0) {
+            error("Failed to open socket.");
+            continue;
+        }
+        server = gethostbyname(host);
+        if (server == NULL) {
+            error("No such host (bad hostname).");
+            continue;
+        }
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+        serv_addr.sin_port = htons(port);
+        // connect() takes 3 args: file descriptor, address of host, size of address
+        if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+            error("Unable to connect to host.");
+            continue;
+        }
+        printf("Connected to router %d (%s)...\n", rid, host);
+        char msg[] = "0 1 3 7";
+        n = write(sockfd, msg, strlen(msg));
+        if (n < 0) {
+            error("Failed to write to socket.");
+            continue;
+        }
+        num_conn++;
+        sleep(1);
+    } while (num_conn < 3);
 }
 
 void lct() {
@@ -119,58 +173,6 @@ void lct() {
     }
     fclose(f);
     EDGES = k;
-}
-
-//  Connect
-//  - Load least cost table
-//  - Display least cost to each other router
-//  - Send least cost table to each other router
-
-void conn() {
-    int sockfd, n, num_conn, rid;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-        
-    lct(); // Load least cost table
-    displaytable(); // Display least cost to each other router
-    // Send least cost table to each other router
-    num_conn = 0;
-    rid = -1;
-    do {
-        sleep(1);
-        rid++;
-        if (rid == 4) { rid = 0; }
-        if (rid == id) { continue; }
-        char *host = routers[rid];
-        printf("Attempting to connect to router %d (%s) on port %d...\n", rid, host, port);
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            error("Failed to open socket.");
-            continue;
-        }
-        server = gethostbyname(host);
-        if (server == NULL) {
-            error("No such host (bad hostname).");
-            continue;
-        }
-        bzero((char *) &serv_addr, sizeof(serv_addr));
-        serv_addr.sin_family = AF_INET;
-        bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-        serv_addr.sin_port = htons(port);
-        // connect() takes 3 args: file descriptor, address of host, size of address        
-        if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-            error("Unable to connect to host.");
-            continue;
-        }
-        printf("Connected to router %d (%s)...\n", rid, host);
-        char msg[] = "0 1 3 7";
-        n = write(sockfd, msg, strlen(msg));
-        if (n < 0) {
-            error("Failed to write to socket.");
-            continue;
-        }
-        num_conn++;
-    } while (num_conn < 3);
 }
 
 void displaytable() {
