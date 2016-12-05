@@ -171,6 +171,7 @@ void sendtable() {
             continue;
         }
         printf("Mode has changed to 0\n");
+        close(sockfd);
         receive();
         num_conn++;        
     } while (num_conn < 3);
