@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #define h_addr h_addr_list[0]
+#define MAX_ROUTERS 4
 
 void add();
 void list();
@@ -35,7 +36,7 @@ const int NODES = 4; // number of nodes
 int EDGES;           // number of edges
 Edge edges[16];      // large enough for n <= 2^NODES = 16
 int d[16];           // d[i] is the minimum distance from source node s to node i
-char *routers[4];    // list of current routers
+char *routers[MAX_ROUTERS];    // list of current routers
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
@@ -130,12 +131,17 @@ void list() {
 
 // Send least cost table to another router
 void sendtable() {
-    int sockfd, n, num_conn, rid;
+    int sockfd, max_conn, num_conn, rid;
     struct sockaddr_in serv_addr;
     struct hostent *server;
     mode = 1;
-    num_conn = 0;
-    rid = -1;
+    max_conn = num_conn = 0;
+    rid = -1;    
+    for (int i = 0; i < MAX_ROUTERS; i++) {
+        if (i == id) { continue; }
+        if (routers[i] == NULL) { continue; }
+        max_conn++;
+    }    
     do {
         sleep(1);
         rid++;        
@@ -163,18 +169,18 @@ void sendtable() {
             error("Unable to connect to host\n");
             continue;
         }
-        printf("Connected to router %d\n", rid);
+        printf("Connection OK\n");
         char msg[] = "0 1 3 7";
-        n = write(sockfd, msg, strlen(msg));
+        int n = write(sockfd, msg, strlen(msg));
         if (n < 0) {
             error("Failed to write to socket");
             continue;
         }
         close(sockfd);
-        printf("Mode has changed to 0\n");        
-        receive();
-        num_conn++;        
-    } while (num_conn < 3);
+        num_conn++;
+    } while (num_conn < max_conn);
+    printf("Mode has changed to 0\n");
+    receive();
 }
 
 void lct() {
@@ -255,8 +261,7 @@ void receive() {
     serv_addr.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY gets the IP address of the machine
     // bind() takes 3 args: file descriptor, bind address, size of address
     // Binds the socket to an address
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        printf("Error is here!");
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {        
         error("Failed to bind socket");
     }
     // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
