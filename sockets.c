@@ -170,8 +170,8 @@ void sendtable() {
             error("Failed to write to socket");
             continue;
         }
-        printf("Mode has changed to 0\n");
         close(sockfd);
+        printf("Mode has changed to 0\n");        
         receive();
         num_conn++;        
     } while (num_conn < 3);
@@ -256,6 +256,7 @@ void receive() {
     // bind() takes 3 args: file descriptor, bind address, size of address
     // Binds the socket to an address
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        printf("Error is here!");
         error("Failed to bind socket");
     }
     // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
@@ -284,6 +285,7 @@ void receive() {
         }
     }
     close(sockfd);
+    close(newsockfd);
 }
 
 void bellmanford(int src) {
