@@ -14,7 +14,6 @@
 #include <netdb.h>
 #include <unistd.h>
 
-#define _GNU_SOURCE
 #define h_addr h_addr_list[0]
 
 void add();
@@ -27,7 +26,7 @@ void receive();
 void bellmanford();
 void error();
 
-int id, port;
+int id, mode, port;
 typedef struct {
     int u, v, w;
 } Edge;
@@ -38,45 +37,63 @@ Edge edges[16];      // large enough for n <= 2^NODES = 16
 int d[16];           // d[i] is the minimum distance from source node s to node i
 char *routers[4];    // list of current routers
 
-int main(int argc, char *argv[]) {   
+int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "usage %s id port", argv[0]);
         exit(0);
     }
     id = atoi(argv[1]);
     port = atoi(argv[2]);
+    mode = (id == 0 ? 1 : 0);
     lct();
     printf("CS 356 - Sockets\n");
     printf("Maurice Achtenhagen (2016)\n");
     printf("Using Bellman–Ford algorithm\n");
     printf("----------------------------\n");
-    printf("Router ID = %d , port = %d\n\n", id, port);
-    printf("The commands are as follows:\n\n");
+    printf("Router ID = %d , port = %d\n", id, port);
+    printf("Running in mode %d", mode);
+    if (mode == 1) {
+        printf(" (send)\n\n");
+    } else {
+        printf(" (listen)\n\n");
+    }
+    printf("The commands are as follows :\n\n");
     printf("(1) add \tAdd new router (4 max).\n");
     printf("(2) list \tList current routers.\n");
     printf("(3) send\tSend least cost table to other routers.\n");
-    printf("(4) table\tDisplay least cost table.\n");
-    printf("(5) exit\tQuit the program.\n\n");
+    printf("(4) wait\tWait for incoming data.\n");
+    printf("(5) table\tDisplay least cost table.\n");
+    printf("(6) exit\tQuit the program.\n\n");
     size_t bufsize = 32;
     char *buffer = (char *)malloc(bufsize * sizeof(char));       
-    while (atoi(buffer) != 5) {       
+    while (atoi(buffer) != 6) {       
         buffer = (char *)malloc(bufsize * sizeof(char));
         if (buffer == NULL) {
             perror("Unable to allocate buffer");
             exit(1);
         }
         printf("> ");
-        getline(&buffer, &bufsize, stdin);
+        getline(&buffer, &bufsize, stdin);        
         if (atoi(buffer) == 1) {
             add();
         } else if (atoi(buffer) == 2) {
             list();
         } else if (atoi(buffer) == 3) {
-            sendtable();
+            if (mode == 0) {
+                printf("Must be running in mode 1.\nMode will change upon receiving data.\n");
+            } else {
+                sendtable();
+            }
         } else if (atoi(buffer) == 4) {
+            if (mode == 1) {
+                printf("Must be running in mode 0.\nMode will change upon sending data.\n");
+            } else {
+                receive();
+            }
+        } else if (atoi(buffer) == 5) {
             displaytable();
         } else {
-            if (atoi(buffer) != 5) {
+            if (atoi(buffer) != 6) {
                 printf("> Invalid command. Options: [1, 2, 3, 4, 5]\n");
             } else {
                 printf("Bye!\n");
@@ -95,10 +112,10 @@ void add() {
     for (int i = 0; i < 4; i++) {
         if (routers[i] == NULL) {
             routers[i] = buffer;
+            printf("Added router with IP: %s", routers[i]);
             break;
         }
     }    
-    printf("Added router with IP: %s", routers[0]);
 }
 
 // List current routers
@@ -119,7 +136,8 @@ void sendtable() {
     num_conn = 0;
     rid = -1;
     do {
-        rid++;
+        sleep(1);
+        rid++;        
         if (rid == 4) { rid = 0; }
         if (rid == id) { continue; }
         if (routers[rid] == NULL) { continue; }
@@ -127,12 +145,12 @@ void sendtable() {
         printf("> Attempting to connect to %s\n", host);
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) {
-            error("Failed to open socket.");
+            error("Failed to open socket\n");
             continue;
         }
         server = gethostbyname(host);
         if (server == NULL) {
-            error("No such host (bad hostname).");
+            error("No such host (bad hostname)\n");
             continue;
         }
         bzero((char *) &serv_addr, sizeof(serv_addr));
@@ -141,7 +159,7 @@ void sendtable() {
         serv_addr.sin_port = htons(port);
         // connect() takes 3 args: file descriptor, address of host, size of address
         if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-            error("Unable to connect to host.");
+            error("Unable to connect to host\n");
             continue;
         }
         printf("Connected to router %d (%s)...\n", rid, host);
@@ -151,8 +169,8 @@ void sendtable() {
             error("Failed to write to socket.");
             continue;
         }
-        num_conn++;
-        sleep(1);
+        receive();
+        num_conn++;        
     } while (num_conn < 3);
 }
 
@@ -175,6 +193,7 @@ void lct() {
     EDGES = k;
 }
 
+// Display least cost table
 void displaytable() {
     printf("\nShortest path from router %d to other routers:\n\n", id);
     for (int i = 0; i < NODES; ++i) printf("Node %d\t", i);
