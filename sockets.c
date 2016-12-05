@@ -183,6 +183,63 @@ void sendtable() {
     receive();
 }
 
+//  Receive
+//  - Wait for clients to connect
+//  - Receive least cost table from each other router
+//  - Update least cost to each other router
+//  - Display least cost table to each router
+
+void receive() {
+    int sockfd, newsockfd, pid;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr, cli_addr;
+    mode = 0;    
+    printf("Waiting for incoming data...\n");
+    // socket() takes 3 args: address domain, socket type, protocol
+    // Unix domain: AF_UNIX, Internet: AF_INET
+    // TCP: SOCK_STREAM, UDP: SOCK_DGRAM
+    // Returns entry into file descriptor table, -1 otherwise
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        error("Failed to open socket");
+    }
+    // bzero() takes two args: pointer to buffer, size of buffer
+    bzero((char *) &serv_addr, sizeof(serv_addr)); // Set all values to zero in buffer    
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port); // htons() converts a port number in host byte order to a port  
+    serv_addr.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY gets the IP address of the machine
+    // bind() takes 3 args: file descriptor, bind address, size of address
+    // Binds the socket to an address
+    bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
+    // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
+    // Allows the process to listen on the socket for connections
+    listen(sockfd, 5);
+    clilen = sizeof(cli_addr);
+    // Main loop
+    while (1) {
+        // accept() causes the process to block until a client connects to the server
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        if (newsockfd < 0) {
+            error("Failed to accept connection");
+        }
+        pid = fork();
+        if (pid < 0) {
+            error("Failed to fork process");
+        }
+        if (pid == 0) {
+            // close(sockfd);
+            updatetable(newsockfd);
+            close(newsockfd);
+            mode = 1;
+            printf("Mode has changed to 1\n");
+            break;
+        } else {
+            close(newsockfd);
+        }
+    }
+    close(sockfd);
+}
+
 void lct() {
     int i, j, k, w;
     k = 0;
@@ -231,66 +288,6 @@ void updatetable(int sock) {
         }
     }
     displaytable();
-}
-
-//  Receive
-//  - Wait for clients to connect
-//  - Receive least cost table from each other router
-//  - Update least cost to each other router
-//  - Display least cost table to each router
-
-void receive() {
-    int sockfd, newsockfd, pid;
-    socklen_t clilen;
-    struct sockaddr_in serv_addr, cli_addr;
-    mode = 0;
-    lct();
-    printf("Waiting for incoming data...\n");
-    // socket() takes 3 args: address domain, socket type, protocol
-    // Unix domain: AF_UNIX, Internet: AF_INET
-    // TCP: SOCK_STREAM, UDP: SOCK_DGRAM
-    // Returns entry into file descriptor table, -1 otherwise
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        error("Failed to open socket");
-    }
-    // bzero() takes two args: pointer to buffer, size of buffer
-    bzero((char *) &serv_addr, sizeof(serv_addr)); // Set all values to zero in buffer    
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port); // htons() converts a port number in host byte order to a port  
-    serv_addr.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY gets the IP address of the machine
-    // bind() takes 3 args: file descriptor, bind address, size of address
-    // Binds the socket to an address
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {        
-        error("Failed to bind socket");
-    }
-    // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
-    // Allows the process to listen on the socket for connections
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
-    // Main loop
-    while (1) {
-        // accept() causes the process to block until a client connects to the server
-        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        if (newsockfd < 0) {
-            error("Failed to accept connection");
-        }
-        pid = fork();
-        if (pid < 0) {
-            error("Failed to fork process");
-        }
-        if (pid == 0) {
-            close(sockfd);
-            updatetable(newsockfd);
-            close(newsockfd);
-            mode = 1;
-            printf("Mode has changed to 1\n");
-            break;
-        } else {
-            close(newsockfd);
-        }
-    }
-    close(sockfd);
 }
 
 void bellmanford(int src) {
