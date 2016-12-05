@@ -80,13 +80,13 @@ int main(int argc, char *argv[]) {
             list();
         } else if (atoi(buffer) == 3) {
             if (mode == 0) {
-                printf("Must be running in mode 1.\nMode will change upon receiving data.\n");
+                printf("Must be running in mode 1.\nMode will change upon receiving data\n");
             } else {
                 sendtable();
             }
         } else if (atoi(buffer) == 4) {
             if (mode == 1) {
-                printf("Must be running in mode 0.\nMode will change upon sending data.\n");
+                printf("Must be running in mode 0.\nMode will change upon sending data\n");
             } else {
                 receive();
             }
@@ -167,10 +167,10 @@ void sendtable() {
         char msg[] = "0 1 3 7";
         n = write(sockfd, msg, strlen(msg));
         if (n < 0) {
-            error("Failed to write to socket.");
+            error("Failed to write to socket");
             continue;
         }
-        printf("Mode has changed to 0.\n");
+        printf("Mode has changed to 0\n");
         receive();
         num_conn++;        
     } while (num_conn < 3);
@@ -209,7 +209,7 @@ void updatetable(int sock) {
     char buffer[256];
     bzero(buffer, 256);
     int n = read(sock, buffer, 255);
-    if (n < 0) { error("Failed to read from socket."); }
+    if (n < 0) { error("Failed to read from socket"); }
     printf("Updating table with the following values: %s\n", buffer);
     char *token = strtok(buffer, " ");
     for (int j = 0; j < NODES; ++j) {
@@ -245,7 +245,7 @@ void receive() {
     // Returns entry into file descriptor table, -1 otherwise
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        error("Failed to open socket.");
+        error("Failed to open socket");
     }
     // bzero() takes two args: pointer to buffer, size of buffer
     bzero((char *) &serv_addr, sizeof(serv_addr)); // Set all values to zero in buffer    
@@ -255,7 +255,7 @@ void receive() {
     // bind() takes 3 args: file descriptor, bind address, size of address
     // Binds the socket to an address
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        error("Failed to bind socket.");
+        error("Failed to bind socket");
     }
     // listen() takes 2 args: file descriptor, backlog size (max waiting connections)
     // Allows the process to listen on the socket for connections
@@ -266,17 +266,17 @@ void receive() {
         // accept() causes the process to block until a client connects to the server
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         if (newsockfd < 0) {
-            error("Failed to accept connection.");
+            error("Failed to accept connection");
         }
         pid = fork();
         if (pid < 0) {
-            error("Failed to fork process.");
+            error("Failed to fork process");
         }
         if (pid == 0) {
             close(sockfd);
             updatetable(newsockfd);
             mode = 1;
-            printf("Mode has changed to 1.\n");
+            printf("Mode has changed to 1\n");
             break;
         } else {
             close(newsockfd);
