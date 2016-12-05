@@ -282,6 +282,7 @@ void receive() {
         if (pid == 0) {
             close(sockfd);
             updatetable(newsockfd);
+            close(newsockfd);
             mode = 1;
             printf("Mode has changed to 1\n");
             break;
@@ -290,7 +291,6 @@ void receive() {
         }
     }
     close(sockfd);
-    close(newsockfd);
 }
 
 void bellmanford(int src) {
