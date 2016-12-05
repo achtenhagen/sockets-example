@@ -15,6 +15,7 @@
 
 #define h_addr h_addr_list[0]
 
+void add();
 void lct();
 void conn();
 void displaytable();
@@ -33,23 +34,50 @@ const int NODES = 4; // number of nodes
 int EDGES;           // number of edges
 Edge edges[16];      // large enough for n <= 2^NODES = 16
 int d[16];           // d[i] is the minimum distance from source node s to node i
-char *routers[4] = {
-    "10.0.1.7",
-    "10.0.1.3",
-    "10.0.1.2",
-    "45.33.74.157"
-};
+char *routers[4];
 
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
+int main(int argc, char *argv[]) {   
+    if (argc < 3) {
         fprintf(stderr, "usage %s id port", argv[0]);
         exit(0);
     }
     id = atoi(argv[1]);
     port = atoi(argv[2]);
-    if (id == 0) { conn(); }
-    receive();
+    lct();
+    printf("CS 356 - Sockets\n");
+    printf("Maurice Achtenhagen (2016)\n");
+    printf("Using Bellman–Ford algorithm\n");
+    printf("----------------------------\n");
+    printf("Router ID = %d , port = %d\n\n", id, port);
+    printf("The commands are as follows:\n\n");
+    printf("(1) add \tAdd new router (4 max).\n");
+    printf("(2) list \tList current routers.\n");
+    printf("(3) send\tSend least cost table to another router.\n");
+    printf("(4) table\tDisplay least cost table.\n");
+    printf("(5) exit\tQuit the program.\n\n");    
+    size_t bufsize = 32;
+    const char *exitcmd = "exit";
+    const char *tablecmd = "table";
+    char *buffer = (char *)malloc(bufsize * sizeof(char));       
+    while (atoi(buffer) != 4) {       
+        buffer = (char *)malloc(bufsize * sizeof(char));
+        if (buffer == NULL) {
+            perror("Unable to allocate buffer");
+            exit(1);
+        }
+        printf("> ");
+        getline(&buffer, &bufsize, stdin);
+        if (atoi(buffer) == 1) {
+            add();
+        } else if (atoi(buffer) == 3) {
+            displaytable();
+        }
+    }
     return 0;
+}
+
+void add() {
+    
 }
 
 void lct() {
