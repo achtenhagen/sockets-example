@@ -36,7 +36,8 @@ const int NODES = 4; // number of nodes
 int EDGES;           // number of edges
 Edge edges[16];      // large enough for n <= 2^NODES = 16
 int d[16];           // d[i] is the minimum distance from source node s to node i
-char *routers[MAX_ROUTERS];    // list of current routers
+char *routers[MAX_ROUTERS]; // list of current routers
+char initval[4]; // Initial values for router
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
@@ -170,8 +171,7 @@ void sendtable() {
             continue;
         }
         printf("Connection OK\n");
-        char msg[] = "0 1 3 7";
-        int n = write(sockfd, msg, strlen(msg));
+        int n = write(sockfd, initval, strlen(initval));
         if (n < 0) {
             error("Failed to write to socket");
             continue;
@@ -253,6 +253,9 @@ void lct() {
                 edges[k].w = w;
                 k++;
             }
+            if (i == id) {                
+                initval[i] = w;                
+            }            
         }
     }
     fclose(f);
@@ -280,9 +283,9 @@ void updatetable(int sock) {
         if (token != NULL) {
             int num = atoi(token);
             if (num != 0) {
-                edges[3].u = id;
-                edges[3].v = j;
-                edges[3].w = num;
+                edges[1].u = id;
+                edges[1].v = j;
+                edges[1].w = num;
             }
             token = strtok(NULL, " ");
         }
