@@ -133,6 +133,7 @@ void sendtable() {
     int sockfd, n, num_conn, rid;
     struct sockaddr_in serv_addr;
     struct hostent *server;
+    mode = 1;
     num_conn = 0;
     rid = -1;
     do {
@@ -142,7 +143,7 @@ void sendtable() {
         if (rid == id) { continue; }
         if (routers[rid] == NULL) { continue; }
         char *host = routers[rid];
-        printf("> Attempting to connect to %s\n", host);
+        printf("Attempting to connect to %s", host);
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) {
             error("Failed to open socket\n");
@@ -162,13 +163,14 @@ void sendtable() {
             error("Unable to connect to host\n");
             continue;
         }
-        printf("Connected to router %d (%s)...\n", rid, host);
+        printf("Connected to router %d\n", rid);
         char msg[] = "0 1 3 7";
         n = write(sockfd, msg, strlen(msg));
         if (n < 0) {
             error("Failed to write to socket.");
             continue;
         }
+        printf("Mode has changed to 0.\n");
         receive();
         num_conn++;        
     } while (num_conn < 3);
@@ -234,10 +236,9 @@ void receive() {
     int sockfd, newsockfd, pid;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
-
+    mode = 0;
     lct();
-    printf("Listening on port %d\n", port);
-    printf("Waiting for other routers...\n");
+    printf("Waiting for incoming data...\n");
     // socket() takes 3 args: address domain, socket type, protocol
     // Unix domain: AF_UNIX, Internet: AF_INET
     // TCP: SOCK_STREAM, UDP: SOCK_DGRAM
@@ -273,8 +274,10 @@ void receive() {
         }
         if (pid == 0) {
             close(sockfd);
-            updatetable(newsockfd);            
-            exit(0);
+            updatetable(newsockfd);
+            mode = 1;
+            printf("Mode has changed to 1.\n");
+            break;
         } else {
             close(newsockfd);
         }
