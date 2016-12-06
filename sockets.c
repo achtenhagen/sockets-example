@@ -242,8 +242,8 @@ void receive() {
 
 void lct() {
     int i, j, k, w;
-    char *c = (char *)malloc(4 * sizeof(char));
-    initval = (char *)malloc(4 * sizeof(char));
+    char *c = (char *)malloc(sizeof(char));
+    initval = (char *)malloc(sizeof(char));
     k = 0;
     FILE *f = fopen("lct.txt", "r");
     for (i = 0; i < NODES; ++i) {
@@ -277,6 +277,7 @@ void displaytable() {
     printf("\n------------------------------\n\n");
 }
 
+// Update least cost table
 void updatetable(int sock) {
     char buffer[256];
     bzero(buffer, 256);
@@ -284,17 +285,16 @@ void updatetable(int sock) {
     if (n < 0) { error("Failed to read from socket"); }
     printf("Updating table with the following values: %s\n", buffer);
     char *token = strtok(buffer, " ");
-    for (int j = 0; j < NODES; ++j) {
+    for (int i = 0; i < EDGES; ++i) {
+        if (edges[i].u != 1) { continue; }
         if (token != NULL) {
             int num = atoi(token);
             if (num != 0) {
-                edges[1].u = id;
-                edges[1].v = j;
-                edges[1].w = num;
+                edges[i].w = num;
             }
             token = strtok(NULL, " ");
         }
-    }
+    }    
     displaytable();
 }
 
