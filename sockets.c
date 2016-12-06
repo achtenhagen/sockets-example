@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     id = atoi(argv[1]);
     port = atoi(argv[2]);
     mode = (id == 0 ? 1 : 0);
-    lct();
+    lct();            
     printf("CS 356 - Sockets\n");
     printf("Maurice Achtenhagen (2016)\n");
     printf("Using Bellman–Ford algorithm\n");
@@ -250,12 +250,10 @@ void lct() {
         for (j = 0; j < NODES; ++j) {
             fscanf(f, "%s", c);                        
             w = atoi(c);
-            if (w != 0) {
-                edges[k].u = i;
-                edges[k].v = j;
-                edges[k].w = w;
-                k++;
-            }
+            edges[k].u = i;
+            edges[k].v = j;
+            edges[k].w = w;
+            k++;
             if (i == id) {                
                 strcat(initval, c);
                 strcat(initval, " ");
