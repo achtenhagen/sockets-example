@@ -37,7 +37,7 @@ int EDGES;           // number of edges
 Edge edges[16];      // large enough for n <= 2^NODES = 16
 int d[16];           // d[i] is the minimum distance from source node s to node i
 char *routers[MAX_ROUTERS]; // list of current routers
-char initval[4]; // Initial values for router
+char *initval[MAX_ROUTERS]; // Initial values for router
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
@@ -170,8 +170,8 @@ void sendtable() {
             error("Unable to connect to host\n");
             continue;
         }
-        printf("Connection OK\n");
-        int n = write(sockfd, initval, strlen(initval));
+        printf("Connection OK\n");        
+        int n = write(sockfd, initval, 4);
         if (n < 0) {
             error("Failed to write to socket");
             continue;
@@ -242,20 +242,22 @@ void receive() {
 
 void lct() {
     int i, j, k, w;
+    char c[4];
     k = 0;
     FILE *f = fopen("lct.txt", "r");
     for (i = 0; i < NODES; ++i) {
         for (j = 0; j < NODES; ++j) {
-            fscanf(f, "%d", &w);
+            fscanf(f, "%s", c);
+            w = atoi(c);
             if (w != 0) {
                 edges[k].u = i;
                 edges[k].v = j;
                 edges[k].w = w;
                 k++;
             }
-            if (i == id) {                
-                initval[i] = w;                
-            }            
+            if (i == id) {
+                initval[i] = c;                
+            }
         }
     }
     fclose(f);
