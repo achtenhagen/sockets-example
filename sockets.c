@@ -170,9 +170,8 @@ void sendtable() {
             error("Unable to connect to host\n");
             continue;
         }
-        printf("Connection OK\n");
-        printf("%s\n", initval);    
-        int n = write(sockfd, initval, 4);
+        printf("Connection OK\n");   
+        int n = write(sockfd, initval, strlen(initval));
         if (n < 0) {
             error("Failed to write to socket");
             continue;
@@ -263,7 +262,7 @@ void lct() {
             }
         }
     }
-    printf("%s\n", initval);
+    initval[strlen(initval)-1] = 0;
     fclose(f);
     EDGES = k;
 }
