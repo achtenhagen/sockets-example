@@ -1,11 +1,11 @@
 # sockets-example
-A simple example of a client-server program
+A simple example of a sockets program using the Bellman–Ford algorithm
 
-This example demonstrates the ability for a client program running on one Host to connect to a server program running on a different host. An IP address and valid port number are required for sockets going over the internet. Both the client and the server establish their own socket for communicating over the network.
+This example demonstrates the ability for four routers to exchange data between themselves over the network. Every time a router changes the data in its table, it will send its entire table to all directly connected routers. Once the shortest paths have been computed, the program will terminate.
 
 ## Usage
 
-Compile both sclient.c and sserver.c separately using a C compiler like gcc. The client program requires 2 arguments, a hostname and port number. The server program only requires a port number to start listening.
+Compile sockets.c using a C compiler like gcc. The sockets program requires 2 arguments, a router ID and port number. The client and server programs are now merged into one executable.
 
 ## Overview
 
