@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     id = atoi(argv[1]);
     port = atoi(argv[2]);
     mode = (id == 0 ? 1 : 0);
-    lct();            
+    lct();
     printf("CS 356 - Sockets\n");
     printf("Maurice Achtenhagen (2016)\n");
     printf("Using Bellman–Ford algorithm\n");
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     printf("(3) send\tSend least cost table to other routers.\n");
     printf("(4) wait\tWait for incoming data.\n");
     printf("(5) table\tDisplay least cost table.\n");
-    printf("(6) exit\tQuit the program.\n\n");
+    printf("(6) exit\tQuit the program.\n\n");    
     size_t bufsize = 32;
     char *buffer = (char *)malloc(bufsize * sizeof(char));       
     while (atoi(buffer) != 6) {       
@@ -227,7 +227,6 @@ void receive() {
             error("Failed to fork process");
         }
         if (pid == 0) {
-            // close(sockfd);
             updatetable(newsockfd);
             close(newsockfd);
             mode = 1;
@@ -240,6 +239,7 @@ void receive() {
     close(sockfd);
 }
 
+// Construct least cost table
 void lct() {
     int i, j, k, w;
     char *c = (char *)malloc(sizeof(char));
@@ -292,10 +292,11 @@ void updatetable(int sock) {
             }
             token = strtok(NULL, " ");
         }
-    }    
+    }
     displaytable();
 }
 
+// Main algorithm
 void bellmanford(int src) {
     int i, j;
     for (i = 0; i < NODES; ++i) { d[i] = INT_MAX; }
@@ -311,5 +312,4 @@ void bellmanford(int src) {
 
 void error(char *msg) {
     perror(msg);
-    // exit(0);
 }
